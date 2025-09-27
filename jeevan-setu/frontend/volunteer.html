@@ -23,7 +23,8 @@
           <li class="nav-item"><a class="nav-link" href="index.html">🏠 Home</a></li>
           <li class="nav-item"><a class="nav-link" href="#requests">📋 Requests</a></li>
           <li class="nav-item"><a class="nav-link" href="#map">🗺️ Map</a></li>
-          <li class="nav-item"><a class="nav-link" href="#profile">👤 Profile</a></li>
+          <li class="nav-item"><span class="nav-link" id="userInfo">Welcome, User</span></li>
+          <li class="nav-item"><button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button></li>
         </ul>
       </div>
     </div>
@@ -102,69 +103,25 @@
           </div>
 
           <div id="requestsList">
-            <!-- Request Cards -->
-            <div class="card mb-3">
-              <div class="card-header d-flex justify-content-between">
-                <span class="badge bg-danger">URGENT</span>
-                <small>2 min ago</small>
+            <!-- Loading indicator -->
+            <div id="loadingIndicator" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
               </div>
-              <div class="card-body">
-                <h5>🏥 Medical Emergency</h5>
-                <p><strong>Asha Patel</strong> - Elderly woman needs immediate medical attention</p>
-                <p>📍 Sector 15, Noida (2.3 km away)</p>
-                <div class="d-flex gap-3">
-                  <span>Age: 65</span>
-                  <span>Condition: Chest pain</span>
-                  <span>Contact: 9876543210</span>
-                </div>
-                <div class="mt-3">
-                  <button class="btn btn-primary me-2" onclick="acceptRequest('req1')">Accept Request</button>
-                  <button class="btn btn-outline-secondary">View Details</button>
+              <p class="mt-2">Loading requests...</p>
+            </div>
+            
+            <!-- No requests message -->
+            <div id="noRequestsMessage" class="text-center py-5" style="display: none;">
+              <div class="card">
+                <div class="card-body">
+                  <h5>🎉 No Active Requests</h5>
+                  <p class="text-muted">All caught up! Check back later for new emergency requests.</p>
                 </div>
               </div>
             </div>
-
-            <div class="card mb-3">
-              <div class="card-header d-flex justify-content-between">
-                <span class="badge bg-warning text-dark">HIGH</span>
-                <small>5 min ago</small>
-              </div>
-              <div class="card-body">
-                <h5>🍞 Food & Water</h5>
-                <p><strong>Mohammed Ali</strong> - Family of 4 needs food supplies</p>
-                <p>📍 Block A, Greater Noida (4.1 km away)</p>
-                <div class="d-flex gap-3">
-                  <span>Family size: 4</span>
-                  <span>Duration: 2 days</span>
-                  <span>Contact: 9876543211</span>
-                </div>
-                <div class="mt-3">
-                  <button class="btn btn-primary me-2" onclick="acceptRequest('req2')">Accept Request</button>
-                  <button class="btn btn-outline-secondary">View Details</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="card mb-3">
-              <div class="card-header d-flex justify-content-between">
-                <span class="badge bg-info text-dark">MEDIUM</span>
-                <small>12 min ago</small>
-              </div>
-              <div class="card-body">
-                <h5>🏠 Shelter</h5>
-                <p><strong>Priya Singh</strong> - Temporary shelter needed</p>
-                <p>📍 Sector 62, Noida (3.7 km away)</p>
-                <div class="d-flex gap-3">
-                  <span>People: 2</span>
-                  <span>Duration: 1 week</span>
-                  <span>Contact: 9876543212</span>
-                </div>
-                <div class="mt-3">
-                  <button class="btn btn-primary me-2" onclick="acceptRequest('req3')">Accept Request</button>
-                  <button class="btn btn-outline-secondary">View Details</button>
-                </div>
-              </div>
-            </div>
+            
+            <!-- Dynamic request cards will be inserted here -->
           </div>
         </section>
 
@@ -188,51 +145,297 @@
 
   <!-- Bootstrap JS & Dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/api.js"></script>
   <script>
+    // Global variables
+    let allRequests = [];
+    let filteredRequests = [];
+    let isAvailable = true;
+
+    // Check authentication
+    function checkAuth() {
+      const user = sessionStorage.getItem('user');
+      if (!user) {
+        window.location.href = 'login.html';
+        return false;
+      }
+      
+      const userData = JSON.parse(user);
+      if (userData.role !== 'volunteer') {
+        showNotification('Access denied. Volunteer role required.', 'danger');
+        setTimeout(() => window.location.href = 'login.html', 2000);
+        return false;
+      }
+      
+      // Show user info
+      document.getElementById('userInfo').textContent = `Welcome, ${userData.name}`;
+      return true;
+    }
+
+    // Logout function
+    function logout() {
+      sessionStorage.removeItem('user');
+      window.location.href = 'login.html';
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Page loaded, initializing...');
+      if (!checkAuth()) return;
+      loadRequests();
+      setupEventListeners();
+    });
+
+    // Retry mechanism for failed requests
+    function retryLoadRequests() {
+      console.log('Retrying to load requests...');
+      loadRequests();
+    }
+
+    // Load requests from backend
+    async function loadRequests() {
+      try {
+        console.log('Loading requests...');
+        const response = await api.getAllRequests();
+        console.log('API Response:', response);
+        
+        if (response && response.success) {
+          allRequests = response.data || [];
+          filteredRequests = [...allRequests];
+          console.log('Loaded requests:', allRequests);
+          displayRequests();
+        } else {
+          console.error('Invalid response format:', response);
+          showNotification('Invalid response from server. Please try again.', 'warning');
+        }
+      } catch (error) {
+        console.error('Error loading requests:', error);
+        showNotification('Failed to load requests. Please check if the server is running.', 'danger');
+        
+        // Add retry button
+        const container = document.getElementById('requestsList');
+        if (container) {
+          container.innerHTML = `
+            <div class="card">
+              <div class="card-body text-center">
+                <h5>⚠️ Failed to Load Requests</h5>
+                <p class="text-muted">Unable to connect to the server. Please check if the server is running.</p>
+                <button class="btn btn-primary" onclick="retryLoadRequests()">Retry</button>
+              </div>
+            </div>
+          `;
+        }
+      } finally {
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+          loadingIndicator.style.display = 'none';
+        }
+      }
+    }
+
+    // Display requests
+    function displayRequests() {
+      const container = document.getElementById('requestsList');
+      const noRequestsMsg = document.getElementById('noRequestsMessage');
+      
+      if (!container) {
+        console.error('Container element not found');
+        return;
+      }
+      
+      console.log('Displaying requests:', filteredRequests);
+      
+      if (filteredRequests.length === 0) {
+        if (noRequestsMsg) {
+          noRequestsMsg.style.display = 'block';
+        }
+        container.innerHTML = '';
+        return;
+      }
+      
+      if (noRequestsMsg) {
+        noRequestsMsg.style.display = 'none';
+      }
+      
+      container.innerHTML = filteredRequests.map(request => {
+        console.log('Rendering request:', request);
+        return `
+          <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between">
+              <span class="badge ${getPriorityBadge(request.priority || 'medium')}">${(request.priority || 'medium').toUpperCase()}</span>
+              <small>${formatTimestamp(request.timestamp)}</small>
+            </div>
+            <div class="card-body">
+              <h5>${getEmergencyIcon(request.type)} ${getEmergencyTypeName(request.type)}</h5>
+              <p><strong>${request.name || 'Anonymous'}</strong> - ${request.description}</p>
+              <p>📍 ${request.location}</p>
+              <div class="d-flex gap-3">
+                <span>Type: ${request.type}</span>
+                <span>Status: ${request.status}</span>
+                <span>Contact: ${request.contact}</span>
+              </div>
+              <div class="mt-3">
+                <button class="btn btn-primary me-2" onclick="acceptRequest(${request.id})" id="acceptBtn${request.id}">
+                  <span class="spinner-border spinner-border-sm d-none" id="spinner${request.id}"></span>
+                  Accept Request
+                </button>
+                <button class="btn btn-outline-secondary" onclick="viewRequestDetails(${request.id})">View Details</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Get emergency type icon
+    function getEmergencyIcon(type) {
+      const icons = {
+        'medical': '🏥',
+        'rescue': '🚨',
+        'food': '🍞',
+        'shelter': '🏠',
+        'transport': '🚗',
+        'other': '⚠️'
+      };
+      return icons[type] || '⚠️';
+    }
+
+    // Get emergency type name
+    function getEmergencyTypeName(type) {
+      const names = {
+        'medical': 'Medical Emergency',
+        'rescue': 'Rescue Required',
+        'food': 'Food & Water',
+        'shelter': 'Shelter',
+        'transport': 'Transportation',
+        'other': 'Other'
+      };
+      return names[type] || 'Emergency';
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Distance slider
+      const range = document.getElementById('distanceRange');
+      const value = document.getElementById('distanceValue');
+      range.addEventListener('input', () => {
+        value.textContent = range.value + ' km';
+        filterRequests();
+      });
+
+      // Filter checkboxes
+      document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', filterRequests);
+      });
+
+      // View toggle
+      document.querySelectorAll('.btn-group button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          if (btn.dataset.view === 'map') {
+            document.getElementById('requests').style.display = 'none';
+            document.getElementById('map').style.display = 'block';
+          } else {
+            document.getElementById('requests').style.display = 'block';
+            document.getElementById('map').style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Filter requests based on criteria
+    function filterRequests() {
+      const distance = parseInt(document.getElementById('distanceRange').value);
+      const medicalChecked = document.getElementById('filterMedical').checked;
+      const foodChecked = document.getElementById('filterFood').checked;
+      const shelterChecked = document.getElementById('filterShelter').checked;
+      const transportChecked = document.getElementById('filterTransport').checked;
+
+      filteredRequests = allRequests.filter(request => {
+        // Type filtering
+        const typeMatch = 
+          (request.type === 'medical' && medicalChecked) ||
+          (request.type === 'food' && foodChecked) ||
+          (request.type === 'shelter' && shelterChecked) ||
+          (request.type === 'transport' && transportChecked) ||
+          (!['medical', 'food', 'shelter', 'transport'].includes(request.type));
+
+        // Only show pending requests for volunteers to accept
+        return typeMatch && request.status === 'pending';
+      });
+
+      console.log('Filtered requests:', filteredRequests);
+      displayRequests();
+    }
+
+    // Accept request
+    async function acceptRequest(id) {
+      console.log('Accepting request with ID:', id);
+      
+      // Show loading state
+      const acceptBtn = document.getElementById(`acceptBtn${id}`);
+      const spinner = document.getElementById(`spinner${id}`);
+      
+      if (acceptBtn && spinner) {
+        acceptBtn.disabled = true;
+        spinner.classList.remove('d-none');
+      }
+      
+      try {
+        const response = await api.updateRequestStatus(id, 'in_progress');
+        console.log('API Response:', response);
+        if (response.success) {
+          showNotification('Request accepted! Contact details will be shared shortly.', 'success');
+          loadRequests(); // Refresh the list
+        } else {
+          showNotification('Failed to accept request. Please try again.', 'danger');
+        }
+      } catch (error) {
+        console.error('Error accepting request:', error);
+        showNotification('Failed to accept request. Please try again.', 'danger');
+      } finally {
+        // Hide loading state
+        if (acceptBtn && spinner) {
+          acceptBtn.disabled = false;
+          spinner.classList.add('d-none');
+        }
+      }
+    }
+
+    // View request details
+    function viewRequestDetails(id) {
+      const request = allRequests.find(r => r.id === id);
+      if (request) {
+        alert(`Request Details:\n\nType: ${request.type}\nLocation: ${request.location}\nDescription: ${request.description}\nContact: ${request.contact}\nStatus: ${request.status}`);
+      }
+    }
+
+    // Toggle availability
+    function toggleAvailability() {
+      const btn = document.getElementById('availabilityBtn');
+      isAvailable = !isAvailable;
+      
+      if (isAvailable) {
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-success');
+        btn.innerHTML = '<span class="status-indicator online me-2"></span>Available for Help';
+        showNotification('You are now available to help!', 'success');
+      } else {
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-danger');
+        btn.innerHTML = '<span class="status-indicator offline me-2"></span>Unavailable';
+        showNotification('You are now unavailable.', 'warning');
+      }
+    }
+
+    // Scroll to top
     function scrollToTop() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function toggleAvailability() {
-      const btn = document.getElementById('availabilityBtn');
-      if (btn.classList.contains('btn-success')) {
-        btn.classList.remove('btn-success');
-        btn.classList.add('btn-danger');
-        btn.innerHTML = '<span class="status-indicator offline me-2"></span>Unavailable';
-      } else {
-        btn.classList.remove('btn-danger');
-        btn.classList.add('btn-success');
-        btn.innerHTML = '<span class="status-indicator online me-2"></span>Available for Help';
-      }
-    }
-
-    function acceptRequest(id) {
-      alert('Request accepted! You will receive contact details shortly.');
-      // Backend API call can be added here
-    }
-
-    // Distance slider
-    const range = document.getElementById('distanceRange');
-    const value = document.getElementById('distanceValue');
-    range.addEventListener('input', () => {
-      value.textContent = range.value + ' km';
-    });
-
-    // View toggle
-    document.querySelectorAll('.btn-group button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        if (btn.dataset.view === 'map') {
-          document.getElementById('requests').style.display = 'none';
-          document.getElementById('map').style.display = 'block';
-        } else {
-          document.getElementById('requests').style.display = 'block';
-          document.getElementById('map').style.display = 'none';
-        }
-      });
-    });
+    // Auto-refresh requests every 30 seconds
+    setInterval(loadRequests, 30000);
   </script>
 </body>
 </html>

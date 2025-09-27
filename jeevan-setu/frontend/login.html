@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeevan Setu - Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+    .login-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+    .role-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .role-card:hover {
+      transform: translateY(-5px);
+      border-color: #007bff;
+      box-shadow: 0 10px 25px rgba(0, 123, 255, 0.2);
+    }
+    .role-card.selected {
+      border-color: #007bff;
+      background-color: #e3f2fd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        <div class="login-card p-5">
+          <!-- Header -->
+          <div class="text-center mb-4">
+            <h1 class="display-4 text-primary">🌐 Jeevan Setu</h1>
+            <p class="lead text-muted">Emergency Response System</p>
+          </div>
+
+          <!-- Role Selection -->
+          <div class="mb-4">
+            <h5 class="text-center mb-3">Select Your Role</h5>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="card role-card h-100" onclick="selectRole('victim')" id="victimCard">
+                  <div class="card-body text-center">
+                    <div class="fs-1 mb-2">🚨</div>
+                    <h6>Victim</h6>
+                    <small class="text-muted">Need Emergency Help</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card role-card h-100" onclick="selectRole('volunteer')" id="volunteerCard">
+                  <div class="card-body text-center">
+                    <div class="fs-1 mb-2">🤝</div>
+                    <h6>Volunteer</h6>
+                    <small class="text-muted">Help Others</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card role-card h-100" onclick="selectRole('admin')" id="adminCard">
+                  <div class="card-body text-center">
+                    <div class="fs-1 mb-2">👨‍💼</div>
+                    <h6>Admin</h6>
+                    <small class="text-muted">Manage System</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Login Form -->
+          <form id="loginForm" style="display: none;">
+            <div class="mb-3">
+              <label class="form-label">Username</label>
+              <input type="text" class="form-control" id="username" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" class="form-control" id="password" required>
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none"></span>
+                Login
+              </button>
+            </div>
+          </form>
+
+          <!-- Demo Credentials -->
+          <div id="demoCredentials" class="mt-4" style="display: none;">
+            <div class="alert alert-info">
+              <h6>Demo Credentials:</h6>
+              <div id="credentialsList"></div>
+            </div>
+          </div>
+
+          <!-- Emergency Access -->
+          <div class="text-center mt-4">
+            <p class="text-muted">Emergency? <a href="victim.html" class="text-danger">Access Without Login</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    let selectedRole = null;
+
+    // Demo credentials for each role
+    const demoCredentials = {
+      victim: [
+        { username: 'victim1', password: 'victim123', name: 'Asha Patel' },
+        { username: 'victim2', password: 'victim123', name: 'Rajesh Kumar' }
+      ],
+      volunteer: [
+        { username: 'volunteer1', password: 'volunteer123', name: 'Priya Singh' },
+        { username: 'volunteer2', password: 'volunteer123', name: 'Amit Sharma' }
+      ],
+      admin: [
+        { username: 'admin', password: 'admin123', name: 'System Admin' },
+        { username: 'admin2', password: 'admin123', name: 'Emergency Manager' }
+      ]
+    };
+
+    function selectRole(role) {
+      selectedRole = role;
+      
+      // Update UI
+      document.querySelectorAll('.role-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      document.getElementById(role + 'Card').classList.add('selected');
+      
+      // Show login form
+      document.getElementById('loginForm').style.display = 'block';
+      
+      // Show demo credentials
+      showDemoCredentials(role);
+    }
+
+    function showDemoCredentials(role) {
+      const credentialsDiv = document.getElementById('demoCredentials');
+      const credentialsList = document.getElementById('credentialsList');
+      
+      credentialsList.innerHTML = demoCredentials[role].map(cred => 
+        `<div><strong>${cred.username}</strong> / ${cred.password} (${cred.name})</div>`
+      ).join('');
+      
+      credentialsDiv.style.display = 'block';
+    }
+
+    // Handle login form submission
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const spinner = document.getElementById('loginSpinner');
+      
+      // Show loading state
+      spinner.classList.remove('d-none');
+      
+      try {
+        // Simulate authentication (in real app, this would call backend)
+        const isValid = validateCredentials(username, password, selectedRole);
+        
+        if (isValid) {
+          // Store user session
+          const user = demoCredentials[selectedRole].find(u => u.username === username);
+          sessionStorage.setItem('user', JSON.stringify({
+            role: selectedRole,
+            username: username,
+            name: user.name,
+            loginTime: new Date().toISOString()
+          }));
+          
+          // Redirect to appropriate dashboard
+          redirectToDashboard(selectedRole);
+        } else {
+          showNotification('Invalid credentials. Please try again.', 'danger');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showNotification('Login failed. Please try again.', 'danger');
+      } finally {
+        spinner.classList.add('d-none');
+      }
+    });
+
+    function validateCredentials(username, password, role) {
+      const user = demoCredentials[role].find(u => u.username === username);
+      return user && user.password === password;
+    }
+
+    function redirectToDashboard(role) {
+      switch(role) {
+        case 'victim':
+          window.location.href = 'victim.html';
+          break;
+        case 'volunteer':
+          window.location.href = 'volunteer.html';
+          break;
+        case 'admin':
+          window.location.href = 'admin.html';
+          break;
+        default:
+          showNotification('Invalid role selected.', 'danger');
+      }
+    }
+
+    // Check if user is already logged in
+    window.addEventListener('load', function() {
+      const user = sessionStorage.getItem('user');
+      if (user) {
+        const userData = JSON.parse(user);
+        redirectToDashboard(userData.role);
+      }
+    });
+  </script>
+</body>
+</html>

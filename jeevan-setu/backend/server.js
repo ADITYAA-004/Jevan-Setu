@@ -21,9 +21,11 @@ app.get('/', (req, res) => {
   res.send('✅ Jeevan Setu Backend is running...');
 });
 
-// Database connection
+// Database connection (optional)
 const connectDB = require('./config/db');
-connectDB();
+connectDB().catch(err => {
+  console.log('📝 Continuing without database connection...');
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

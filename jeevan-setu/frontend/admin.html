@@ -24,6 +24,8 @@
           <li class="nav-item"><a class="nav-link" href="#requests">Requests</a></li>
           <li class="nav-item"><a class="nav-link" href="#users">Users</a></li>
           <li class="nav-item"><a class="nav-link" href="#analytics">Analytics</a></li>
+          <li class="nav-item"><span class="nav-link" id="userInfo">Welcome, Admin</span></li>
+          <li class="nav-item"><button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button></li>
         </ul>
       </div>
     </div>
@@ -100,28 +102,7 @@
                 </tr>
               </thead>
               <tbody id="requestsTable">
-                <tr>
-                  <td>REQ001</td>
-                  <td>Medical</td>
-                  <td>Asha Patel</td>
-                  <td>Noida, Sector 15</td>
-                  <td><span class="badge bg-danger">Urgent</span></td>
-                  <td>
-                    <button class="btn btn-sm btn-success me-1" onclick="resolveRequest('REQ001')">Resolve</button>
-                    <button class="btn btn-sm btn-outline-secondary">View</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>REQ002</td>
-                  <td>Food</td>
-                  <td>Mohammed Ali</td>
-                  <td>Greater Noida</td>
-                  <td><span class="badge bg-warning text-dark">High</span></td>
-                  <td>
-                    <button class="btn btn-sm btn-success me-1" onclick="resolveRequest('REQ002')">Resolve</button>
-                    <button class="btn btn-sm btn-outline-secondary">View</button>
-                  </td>
-                </tr>
+                <!-- Dynamic content will be loaded here -->
               </tbody>
             </table>
           </div>
@@ -143,26 +124,7 @@
                 </tr>
               </thead>
               <tbody id="usersTable">
-                <tr>
-                  <td>USR001</td>
-                  <td>Rajesh Kumar</td>
-                  <td>Volunteer</td>
-                  <td>Jan 2023</td>
-                  <td><span class="badge bg-success">Active</span></td>
-                  <td>
-                    <button class="btn btn-sm btn-danger" onclick="blockUser('USR001')">Block</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>USR002</td>
-                  <td>Asha Patel</td>
-                  <td>Victim</td>
-                  <td>Feb 2023</td>
-                  <td><span class="badge bg-secondary">Inactive</span></td>
-                  <td>
-                    <button class="btn btn-sm btn-success" onclick="activateUser('USR002')">Activate</button>
-                  </td>
-                </tr>
+                <!-- Dynamic content will be loaded here -->
               </tbody>
             </table>
           </div>
@@ -182,9 +144,460 @@
     </div>
   </div>
 
+  <!-- Map Modal -->
+  <div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="mapModalLabel">📍 Emergency Location & Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <!-- Person Details -->
+            <div class="col-md-4">
+              <h6>👤 Person Details</h6>
+              <div class="card">
+                <div class="card-body">
+                  <p><strong>Name:</strong> <span id="modalPersonName">-</span></p>
+                  <p><strong>Contact:</strong> <span id="modalPersonContact">-</span></p>
+                  <p><strong>Emergency Type:</strong> <span id="modalEmergencyType">-</span></p>
+                  <p><strong>Priority:</strong> <span id="modalPriority">-</span></p>
+                  <p><strong>Status:</strong> <span id="modalStatus">-</span></p>
+                  <p><strong>Description:</strong></p>
+                  <p class="text-muted" id="modalDescription">-</p>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <h6>🚨 Emergency Actions</h6>
+                <div class="d-grid gap-2">
+                  <button class="btn btn-success" onclick="confirmResolve()">
+                    ✅ Confirm Resolve
+                  </button>
+                  <button class="btn btn-warning" onclick="contactPerson()">
+                    📞 Contact Person
+                  </button>
+                  <button class="btn btn-info" onclick="getDirections()">
+                    🗺️ Get Directions
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Map Container -->
+            <div class="col-md-8">
+              <h6>🗺️ Location Map</h6>
+              <div id="mapContainer" style="height: 400px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+                <div class="d-flex align-items-center justify-content-center h-100">
+                  <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading map...</span>
+                    </div>
+                    <p class="mt-2">Loading map...</p>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-2">
+                <small class="text-muted">
+                  <strong>Address:</strong> <span id="modalAddress">-</span>
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Custom JS -->
-  <script src="js/app.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    // Global variables
+    let allRequests = [];
+    let allUsers = [];
+    let adminStats = {};
+
+    // Check authentication
+    function checkAuth() {
+      const user = sessionStorage.getItem('user');
+      if (!user) {
+        window.location.href = 'login.html';
+        return false;
+      }
+      
+      const userData = JSON.parse(user);
+      if (userData.role !== 'admin') {
+        showNotification('Access denied. Admin role required.', 'danger');
+        setTimeout(() => window.location.href = 'login.html', 2000);
+        return false;
+      }
+      
+      // Show user info
+      document.getElementById('userInfo').textContent = `Welcome, ${userData.name}`;
+      return true;
+    }
+
+    // Logout function
+    function logout() {
+      sessionStorage.removeItem('user');
+      window.location.href = 'login.html';
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      if (!checkAuth()) return;
+      loadAdminData();
+      setupEventListeners();
+    });
+
+    // Load all admin data
+    async function loadAdminData() {
+      try {
+        await Promise.all([
+          loadRequests(),
+          loadUsers(),
+          loadStats()
+        ]);
+      } catch (error) {
+        console.error('Error loading admin data:', error);
+        showNotification('Failed to load admin data. Please refresh the page.', 'danger');
+      }
+    }
+
+    // Load requests
+    async function loadRequests() {
+      try {
+        console.log('Loading requests for admin...');
+        const response = await api.getAllRequests();
+        console.log('Admin API Response:', response);
+        
+        if (response && response.success) {
+          allRequests = response.data || [];
+          displayRequests();
+        } else {
+          console.error('Invalid response format:', response);
+          showNotification('Invalid response from server. Please try again.', 'warning');
+        }
+      } catch (error) {
+        console.error('Error loading requests:', error);
+        showNotification('Failed to load requests. Please check if the server is running.', 'danger');
+      }
+    }
+
+    // Load users (mock data for now)
+    async function loadUsers() {
+      // Mock user data - in real implementation, this would come from backend
+      allUsers = [
+        { id: 'USR001', name: 'Rajesh Kumar', role: 'Volunteer', joined: 'Jan 2023', status: 'active' },
+        { id: 'USR002', name: 'Asha Patel', role: 'Victim', joined: 'Feb 2023', status: 'inactive' },
+        { id: 'USR003', name: 'Priya Singh', role: 'Volunteer', joined: 'Mar 2023', status: 'active' },
+        { id: 'USR004', name: 'Mohammed Ali', role: 'Victim', joined: 'Apr 2023', status: 'active' }
+      ];
+      displayUsers();
+    }
+
+    // Load stats
+    async function loadStats() {
+      // Calculate stats from loaded data
+      adminStats = {
+        totalVictims: allUsers.filter(u => u.role === 'Victim').length,
+        totalVolunteers: allUsers.filter(u => u.role === 'Volunteer').length,
+        pendingRequests: allRequests.filter(r => r.status === 'pending').length,
+        criticalAlerts: allRequests.filter(r => r.priority === 'urgent' && r.status === 'pending').length
+      };
+      displayStats();
+    }
+
+    // Display requests
+    function displayRequests() {
+      const tbody = document.getElementById('requestsTable');
+      tbody.innerHTML = allRequests.map(request => `
+        <tr>
+          <td>REQ${request.id.toString().padStart(3, '0')}</td>
+          <td>${getEmergencyTypeName(request.type)}</td>
+          <td>${request.name || 'Anonymous'}</td>
+          <td>${request.location}</td>
+          <td><span class="badge ${getPriorityBadge(request.priority || 'medium')}">${(request.priority || 'medium').toUpperCase()}</span></td>
+          <td>
+            <button class="btn btn-sm btn-success me-1" onclick="resolveRequest(${request.id})">Resolve</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="viewRequest(${request.id})">View</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Display users
+    function displayUsers() {
+      const tbody = document.getElementById('usersTable');
+      tbody.innerHTML = allUsers.map(user => `
+        <tr>
+          <td>${user.id}</td>
+          <td>${user.name}</td>
+          <td>${user.role}</td>
+          <td>${user.joined}</td>
+          <td><span class="badge ${user.status === 'active' ? 'bg-success' : 'bg-secondary'}">${user.status.toUpperCase()}</span></td>
+          <td>
+            ${user.status === 'active' 
+              ? `<button class="btn btn-sm btn-danger" onclick="blockUser('${user.id}')">Block</button>`
+              : `<button class="btn btn-sm btn-success" onclick="activateUser('${user.id}')">Activate</button>`
+            }
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Display stats
+    function displayStats() {
+      document.getElementById('totalVictims').textContent = adminStats.totalVictims;
+      document.getElementById('totalVolunteers').textContent = adminStats.totalVolunteers;
+      document.getElementById('pendingRequests').textContent = adminStats.pendingRequests;
+      document.getElementById('criticalAlerts').textContent = adminStats.criticalAlerts;
+    }
+
+    // Get emergency type name
+    function getEmergencyTypeName(type) {
+      const names = {
+        'medical': 'Medical',
+        'rescue': 'Rescue',
+        'food': 'Food',
+        'shelter': 'Shelter',
+        'transport': 'Transport',
+        'other': 'Other'
+      };
+      return names[type] || 'Unknown';
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Auto-refresh data every 30 seconds
+      setInterval(loadAdminData, 30000);
+    }
+
+    // Resolve request - now opens map modal
+    function resolveRequest(id) {
+      const request = allRequests.find(r => r.id === id);
+      if (request) {
+        openMapModal(request);
+      } else {
+        showNotification('Request not found!', 'danger');
+      }
+    }
+
+    // Open map modal with request details
+    function openMapModal(request) {
+      console.log('Opening map modal for request:', request);
+      
+      // Populate person details
+      document.getElementById('modalPersonName').textContent = request.name || 'Anonymous';
+      document.getElementById('modalPersonContact').textContent = request.contact || 'Not provided';
+      document.getElementById('modalEmergencyType').textContent = getEmergencyTypeName(request.type);
+      document.getElementById('modalPriority').textContent = (request.priority || 'medium').toUpperCase();
+      document.getElementById('modalStatus').textContent = request.status.toUpperCase();
+      document.getElementById('modalDescription').textContent = request.description || 'No description provided';
+      document.getElementById('modalAddress').textContent = request.location || 'Location not specified';
+      
+      // Store current request ID for actions
+      window.currentRequestId = request.id;
+      
+      // Show the modal
+      const mapModal = new bootstrap.Modal(document.getElementById('mapModal'));
+      mapModal.show();
+      
+      // Initialize map after modal is shown
+      setTimeout(() => {
+        initializeMap(request.location);
+      }, 500);
+    }
+
+    // View request details
+    function viewRequest(id) {
+      const request = allRequests.find(r => r.id === id);
+      if (request) {
+        alert(`Request Details:\n\nID: REQ${request.id.toString().padStart(3, '0')}\nType: ${request.type}\nName: ${request.name || 'Anonymous'}\nLocation: ${request.location}\nDescription: ${request.description}\nContact: ${request.contact}\nStatus: ${request.status}\nPriority: ${request.priority || 'medium'}\nTimestamp: ${new Date(request.timestamp).toLocaleString()}`);
+      }
+    }
+
+    // Block user
+    function blockUser(id) {
+      const user = allUsers.find(u => u.id === id);
+      if (user) {
+        user.status = 'blocked';
+        showNotification(`User ${user.name} has been blocked!`, 'warning');
+        displayUsers();
+        loadStats(); // Update stats
+      }
+    }
+
+    // Activate user
+    function activateUser(id) {
+      const user = allUsers.find(u => u.id === id);
+      if (user) {
+        user.status = 'active';
+        showNotification(`User ${user.name} has been activated!`, 'success');
+        displayUsers();
+        loadStats(); // Update stats
+      }
+    }
+
+    // Map functionality
+    let map = null;
+    let marker = null;
+
+    // Initialize map with location
+    function initializeMap(location) {
+      console.log('Initializing map for location:', location);
+      
+      const mapContainer = document.getElementById('mapContainer');
+      if (!mapContainer) {
+        console.error('Map container not found');
+        return;
+      }
+
+      // Clear previous content
+      mapContainer.innerHTML = '';
+
+      // Create a simple map using OpenStreetMap (free alternative to Google Maps)
+      const mapDiv = document.createElement('div');
+      mapDiv.id = 'map';
+      mapDiv.style.width = '100%';
+      mapDiv.style.height = '400px';
+      mapContainer.appendChild(mapDiv);
+
+      // Use Leaflet.js for mapping (free and lightweight)
+      if (typeof L === 'undefined') {
+        // Load Leaflet CSS and JS
+        const leafletCSS = document.createElement('link');
+        leafletCSS.rel = 'stylesheet';
+        leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(leafletCSS);
+
+        const leafletJS = document.createElement('script');
+        leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        leafletJS.onload = () => createMap(location);
+        document.head.appendChild(leafletJS);
+      } else {
+        createMap(location);
+      }
+    }
+
+    // Create the actual map
+    function createMap(location) {
+      try {
+        // Default coordinates (Delhi, India)
+        let lat = 28.6139;
+        let lng = 77.2090;
+
+        // Try to geocode the location (simplified)
+        if (location) {
+          const coords = geocodeLocation(location);
+          if (coords) {
+            lat = coords.lat;
+            lng = coords.lng;
+          }
+        }
+
+        // Create map
+        map = L.map('map').setView([lat, lng], 13);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add marker
+        marker = L.marker([lat, lng]).addTo(map);
+        marker.bindPopup(`
+          <strong>Emergency Location</strong><br>
+          ${location || 'Location not specified'}<br>
+          <small>Click for more details</small>
+        `).openPopup();
+
+        console.log('Map created successfully');
+      } catch (error) {
+        console.error('Error creating map:', error);
+        document.getElementById('mapContainer').innerHTML = `
+          <div class="d-flex align-items-center justify-content-center h-100">
+            <div class="text-center">
+              <h5>🗺️ Map Unavailable</h5>
+              <p class="text-muted">Unable to load map for this location</p>
+              <p><strong>Address:</strong> ${location || 'Not specified'}</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Simple geocoding function (in real app, use proper geocoding service)
+    function geocodeLocation(location) {
+      // Simple coordinate mapping for common locations
+      const locations = {
+        'mumbai': { lat: 19.0760, lng: 72.8777 },
+        'delhi': { lat: 28.6139, lng: 77.2090 },
+        'bangalore': { lat: 12.9716, lng: 77.5946 },
+        'chennai': { lat: 13.0827, lng: 80.2707 },
+        'kolkata': { lat: 22.5726, lng: 88.3639 },
+        'hyderabad': { lat: 17.3850, lng: 78.4867 },
+        'pune': { lat: 18.5204, lng: 73.8567 },
+        'noida': { lat: 28.5355, lng: 77.3910 },
+        'gurgaon': { lat: 28.4595, lng: 77.0266 }
+      };
+
+      const locationLower = location.toLowerCase();
+      for (const [key, coords] of Object.entries(locations)) {
+        if (locationLower.includes(key)) {
+          return coords;
+        }
+      }
+
+      // Default to Delhi if no match
+      return { lat: 28.6139, lng: 77.2090 };
+    }
+
+    // Modal action functions
+    function confirmResolve() {
+      if (window.currentRequestId) {
+        // Actually resolve the request
+        api.updateRequestStatus(window.currentRequestId, 'completed')
+          .then(response => {
+            if (response.success) {
+              showNotification('Request resolved successfully!', 'success');
+              loadAdminData(); // Refresh data
+              bootstrap.Modal.getInstance(document.getElementById('mapModal')).hide();
+            }
+          })
+          .catch(error => {
+            console.error('Error resolving request:', error);
+            showNotification('Failed to resolve request. Please try again.', 'danger');
+          });
+      }
+    }
+
+    function contactPerson() {
+      const contact = document.getElementById('modalPersonContact').textContent;
+      if (contact && contact !== 'Not provided') {
+        if (confirm(`Call ${contact}?`)) {
+          window.open(`tel:${contact}`, '_self');
+        }
+      } else {
+        showNotification('Contact number not available', 'warning');
+      }
+    }
+
+    function getDirections() {
+      const address = document.getElementById('modalAddress').textContent;
+      if (address && address !== 'Location not specified') {
+        // Open in Google Maps
+        const encodedAddress = encodeURIComponent(address);
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+      } else {
+        showNotification('Address not available for directions', 'warning');
+      }
+    }
+  </script>
 </body>
 </html>

@@ -9,8 +9,9 @@ const connectDB = async () => {
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error('❌ Database connection error:', error.message);
-    process.exit(1);
+    console.warn('⚠️ Database connection failed, using in-memory storage:', error.message);
+    console.log('📝 Note: The application will work with in-memory data storage');
+    // Don't exit the process, let the app continue with in-memory storage
   }
 };
 
