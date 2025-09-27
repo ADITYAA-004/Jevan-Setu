@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeevan Setu - Victim Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Jeevan Setu</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link active" href="#">Victim Portal</a></li>
+          <li class="nav-item"><a class="nav-link" href="volunteer.html">Volunteer</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <section class="py-5">
+    <div class="container">
+      <h2 class="mb-4 text-center">Submit an Emergency Request</h2>
+      <form class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" placeholder="Your Name">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Contact Number</label>
+          <input type="tel" class="form-control" placeholder="Phone Number">
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Location</label>
+          <input type="text" class="form-control" placeholder="City / Address">
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Emergency Details</label>
+          <textarea class="form-control" rows="4" placeholder="Describe your situation"></textarea>
+        </div>
+        <div class="col-12 text-center">
+          <button type="submit" class="btn btn-danger">Submit Request</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <footer class="py-3 bg-dark text-white text-center">
+    <div class="container">
+      <p>&copy; 2025 Jeevan Setu.</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

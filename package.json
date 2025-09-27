@@ -1,0 +1,23 @@
+{
+  "name": "jeevan-setu",
+  "version": "1.0.0",
+  "main": "jeevan-setu/backend/server.js",
+  "scripts": {
+    "start": "node jeevan-setu/backend/server.js",
+    "dev": "nodemon jeevan-setu/backend/server.js",
+    "run": "node jeevan-setu/backend/server.js"
+  },
+  "keywords": ["emergency", "rescue", "volunteer", "victim"],
+  "author": "",
+  "license": "ISC",
+  "description": "Jeevan Setu - Emergency Response System",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
